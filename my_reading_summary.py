@@ -92,6 +92,8 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
             (user_id, cutoff),
         ) or []
 
+        audiobook_completed_rows = self._fetch_audiobook_completed(user_id, cutoff)
+
         detail_rows = gateway.fetch_all(
             """
             SELECT l.read_date, b.id AS book_id, b.title, b.series_name, b.cover_image, b.file_format,
@@ -124,6 +126,15 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
                 "series_name": col(r, "series_name", 2) or "",
                 "cover_image": col(r, "cover_image", 3) or "",
                 "file_format": col(r, "file_format", 4) or "",
+            })
+        for r in audiobook_completed_rows:
+            d = str(col(r, "completed_date", 4))
+            completed_by_date.setdefault(d, []).append({
+                "book_id": col(r, "audiobook_id", 0),
+                "title": col(r, "title", 1),
+                "series_name": col(r, "title", 1) or "",
+                "cover_image": col(r, "cover_image", 2) or "",
+                "file_format": "audiobook",
             })
 
         detail_by_date = {}
@@ -170,6 +181,73 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
             "history_days": CALENDAR_HISTORY_DAYS,
         }
 
+    def _fetch_audiobook_completed(self, user_id, cutoff):
+        """오디오북은 books와 달리 날짜별 청취 기록(user_reading_log 상응 테이블)이 없어
+        audiobook_progress.last_listened_at을 완독일 근사치로 사용한다(책의 last_read_at과
+        동일한 근사 방식). 그래서 일별 페이지/분량·연속 독서일 스트릭에는 반영할 수 없고,
+        캘린더 완독 표시와 카테고리별 완독 집계에만 사용한다."""
+        try:
+            gateway = self.get_db_gateway("audiobook")
+        except Exception:
+            return []
+        col = self._col
+        try:
+            rows = gateway.fetch_all(
+                """
+                SELECT a.id AS audiobook_id, a.title,
+                       CONCAT('/api/media/audiobooks/', a.id, '/cover') AS cover_image,
+                       a.library_id, DATE(p.last_listened_at) AS completed_date
+                FROM audiobook_progress p
+                JOIN audiobooks a ON a.id = p.audiobook_id
+                WHERE p.user_id = ?
+                  AND COALESCE(p.is_completed, 0) = 1
+                  AND DATE(p.last_listened_at) >= ?
+                """,
+                (user_id, cutoff),
+            ) or []
+        except Exception:
+            return []
+        return [
+            {
+                "audiobook_id": col(r, "audiobook_id", 0),
+                "title": col(r, "title", 1),
+                "cover_image": col(r, "cover_image", 2),
+                "library_id": col(r, "library_id", 3),
+                "completed_date": col(r, "completed_date", 4),
+            }
+            for r in rows
+        ]
+
+    def _fetch_audiobook_completed_by_category(self, user_id):
+        try:
+            gateway = self.get_db_gateway("audiobook")
+        except Exception:
+            return []
+        col = self._col
+        try:
+            rows = gateway.fetch_all(
+                """
+                SELECT COALESCE(l.name, '오디오북') AS category_name,
+                       COUNT(DISTINCT p.audiobook_id) AS completed_count
+                FROM audiobook_progress p
+                JOIN audiobooks a ON a.id = p.audiobook_id
+                LEFT JOIN libraries l ON l.id = a.library_id
+                WHERE p.user_id = ?
+                  AND COALESCE(p.is_completed, 0) = 1
+                GROUP BY COALESCE(l.name, '오디오북')
+                """,
+                (user_id,),
+            ) or []
+        except Exception:
+            return []
+        return [
+            {
+                "category_name": col(r, "category_name", 0),
+                "completed_count": int(col(r, "completed_count", 1) or 0),
+            }
+            for r in rows
+        ]
+
     def _fetch_completed_by_category(self, gateway, user_id):
         """카테고리(라이브러리)별 누적 완독 권수 — 캘린더 조회 범위와 무관하게 전체 기간 집계."""
         col = self._col
@@ -189,13 +267,18 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
             (user_id,),
         ) or []
 
-        return [
-            {
-                "category_name": col(r, "category_name", 0),
-                "completed_count": int(col(r, "completed_count", 1) or 0),
-            }
-            for r in rows
-        ]
+        merged = {}
+        for r in rows:
+            name = col(r, "category_name", 0)
+            merged[name] = merged.get(name, 0) + int(col(r, "completed_count", 1) or 0)
+        for r in self._fetch_audiobook_completed_by_category(user_id):
+            name = r["category_name"]
+            merged[name] = merged.get(name, 0) + r["completed_count"]
+
+        return sorted(
+            [{"category_name": k, "completed_count": v} for k, v in merged.items()],
+            key=lambda x: (-x["completed_count"], x["category_name"]),
+        )
 
     @staticmethod
     def _current_streak(active_dates):
