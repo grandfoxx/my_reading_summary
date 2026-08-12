@@ -29,6 +29,16 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
         "order": 91,
     }
 
+    update_manifest = {
+        "enabled": True,
+        "provider": "github-raw",
+        "raw_base_url": "https://raw.githubusercontent.com/grandfoxx/my_reading_summary/master",
+        "files": ["my_reading_summary.py", "__init__.py", "VERSION", "index.html", "script.js", "style.css"],
+        "version_file": "VERSION",
+        "version_key": "plugin version",
+        "show_sample_update_button": True,
+    }
+
     def search(self, db_type, query):
         return []
 
