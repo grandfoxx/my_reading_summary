@@ -84,6 +84,13 @@
 
     const streak = calendarData.streak || { current: 0, longest: 0 };
     document.getElementById('mrs-streak').textContent = `${streak.current}일 (최장 ${streak.longest}일)`;
+
+    // 오디오북은 일별 청취 기록이 없어 페이지/독서일수/연속 독서일 카드는 의미가 없으므로 숨긴다.
+    const isAudiobook = calendarData.mode === 'audiobook';
+    ['mrs-card-pages', 'mrs-card-days', 'mrs-card-streak'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = isAudiobook ? 'none' : '';
+    });
   }
 
   function renderCategoryList() {

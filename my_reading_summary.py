@@ -58,7 +58,10 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
     def _col(row, key, idx):
         return row[key] if isinstance(row, dict) else row[idx]
 
-    def _fetch_calendar(self, db_type, user_id):
+    # ------------------------------------------------------------------
+    # 일반 서재 / 성인 서재 — 책 기준 (user_reading_log 일별 기록 보유)
+    # ------------------------------------------------------------------
+    def _fetch_book_calendar(self, db_type, user_id):
         gateway = self.get_db_gateway(db_type)
         cutoff = (date.today() - timedelta(days=CALENDAR_HISTORY_DAYS)).strftime("%Y-%m-%d")
         col = self._col
@@ -91,8 +94,6 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
             """,
             (user_id, cutoff),
         ) or []
-
-        audiobook_completed_rows = self._fetch_audiobook_completed(user_id, cutoff)
 
         detail_rows = gateway.fetch_all(
             """
@@ -127,15 +128,6 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
                 "cover_image": col(r, "cover_image", 3) or "",
                 "file_format": col(r, "file_format", 4) or "",
             })
-        for r in audiobook_completed_rows:
-            d = str(col(r, "completed_date", 4))
-            completed_by_date.setdefault(d, []).append({
-                "book_id": col(r, "audiobook_id", 0),
-                "title": col(r, "title", 1),
-                "series_name": col(r, "title", 1) or "",
-                "cover_image": col(r, "cover_image", 2) or "",
-                "file_format": "audiobook",
-            })
 
         detail_by_date = {}
         for r in detail_rows:
@@ -167,11 +159,12 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
 
         return {
             "available": True,
+            "mode": "book",
             "daily": daily,
             "monthly": monthly,
             "completed_by_date": completed_by_date,
             "detail_by_date": detail_by_date,
-            "completed_by_category": self._fetch_completed_by_category(gateway, user_id),
+            "completed_by_category": self._fetch_book_completed_by_category(gateway, user_id),
             "streak": {
                 "current": self._current_streak(active_dates),
                 "longest": self._longest_streak(active_dates),
@@ -181,74 +174,7 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
             "history_days": CALENDAR_HISTORY_DAYS,
         }
 
-    def _fetch_audiobook_completed(self, user_id, cutoff):
-        """오디오북은 books와 달리 날짜별 청취 기록(user_reading_log 상응 테이블)이 없어
-        audiobook_progress.last_listened_at을 완독일 근사치로 사용한다(책의 last_read_at과
-        동일한 근사 방식). 그래서 일별 페이지/분량·연속 독서일 스트릭에는 반영할 수 없고,
-        캘린더 완독 표시와 카테고리별 완독 집계에만 사용한다."""
-        try:
-            gateway = self.get_db_gateway("audiobook")
-        except Exception:
-            return []
-        col = self._col
-        try:
-            rows = gateway.fetch_all(
-                """
-                SELECT a.id AS audiobook_id, a.title,
-                       CONCAT('/api/media/audiobooks/', a.id, '/cover') AS cover_image,
-                       a.library_id, DATE(p.last_listened_at) AS completed_date
-                FROM audiobook_progress p
-                JOIN audiobooks a ON a.id = p.audiobook_id
-                WHERE p.user_id = ?
-                  AND COALESCE(p.is_completed, 0) = 1
-                  AND DATE(p.last_listened_at) >= ?
-                """,
-                (user_id, cutoff),
-            ) or []
-        except Exception:
-            return []
-        return [
-            {
-                "audiobook_id": col(r, "audiobook_id", 0),
-                "title": col(r, "title", 1),
-                "cover_image": col(r, "cover_image", 2),
-                "library_id": col(r, "library_id", 3),
-                "completed_date": col(r, "completed_date", 4),
-            }
-            for r in rows
-        ]
-
-    def _fetch_audiobook_completed_by_category(self, user_id):
-        try:
-            gateway = self.get_db_gateway("audiobook")
-        except Exception:
-            return []
-        col = self._col
-        try:
-            rows = gateway.fetch_all(
-                """
-                SELECT COALESCE(l.name, '오디오북') AS category_name,
-                       COUNT(DISTINCT p.audiobook_id) AS completed_count
-                FROM audiobook_progress p
-                JOIN audiobooks a ON a.id = p.audiobook_id
-                LEFT JOIN libraries l ON l.id = a.library_id
-                WHERE p.user_id = ?
-                  AND COALESCE(p.is_completed, 0) = 1
-                GROUP BY COALESCE(l.name, '오디오북')
-                """,
-                (user_id,),
-            ) or []
-        except Exception:
-            return []
-        return [
-            {
-                "category_name": col(r, "category_name", 0),
-                "completed_count": int(col(r, "completed_count", 1) or 0),
-            }
-            for r in rows
-        ]
-
-    def _fetch_completed_by_category(self, gateway, user_id):
+    def _fetch_book_completed_by_category(self, gateway, user_id):
         """카테고리(라이브러리)별 누적 완독 권수 — 캘린더 조회 범위와 무관하게 전체 기간 집계."""
         col = self._col
         rows = gateway.fetch_all(
@@ -267,18 +193,101 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
             (user_id,),
         ) or []
 
-        merged = {}
-        for r in rows:
-            name = col(r, "category_name", 0)
-            merged[name] = merged.get(name, 0) + int(col(r, "completed_count", 1) or 0)
-        for r in self._fetch_audiobook_completed_by_category(user_id):
-            name = r["category_name"]
-            merged[name] = merged.get(name, 0) + r["completed_count"]
+        return [
+            {
+                "category_name": col(r, "category_name", 0),
+                "completed_count": int(col(r, "completed_count", 1) or 0),
+            }
+            for r in rows
+        ]
 
-        return sorted(
-            [{"category_name": k, "completed_count": v} for k, v in merged.items()],
-            key=lambda x: (-x["completed_count"], x["category_name"]),
-        )
+    # ------------------------------------------------------------------
+    # 오디오북 — audiobook_progress 기준 (일별 청취 기록 테이블이 없어
+    # 완독 표시/카테고리 집계만 제공, 일별 분량·스트릭은 제공 불가)
+    # ------------------------------------------------------------------
+    def _fetch_audiobook_calendar(self, user_id):
+        cutoff = (date.today() - timedelta(days=CALENDAR_HISTORY_DAYS)).strftime("%Y-%m-%d")
+        col = self._col
+        today_str = date.today().strftime("%Y-%m-%d")
+
+        try:
+            gateway = self.get_db_gateway("audiobook")
+        except Exception:
+            gateway = None
+
+        completed_rows = []
+        category_rows = []
+        if gateway is not None:
+            try:
+                completed_rows = gateway.fetch_all(
+                    """
+                    SELECT a.id AS audiobook_id, a.title,
+                           CONCAT('/api/media/audiobooks/', a.id, '/cover') AS cover_image,
+                           DATE(p.last_listened_at) AS completed_date
+                    FROM audiobook_progress p
+                    JOIN audiobooks a ON a.id = p.audiobook_id
+                    WHERE p.user_id = ?
+                      AND COALESCE(p.is_completed, 0) = 1
+                      AND DATE(p.last_listened_at) >= ?
+                    """,
+                    (user_id, cutoff),
+                ) or []
+            except Exception:
+                completed_rows = []
+            try:
+                category_rows = gateway.fetch_all(
+                    """
+                    SELECT COALESCE(l.name, '오디오북') AS category_name,
+                           COUNT(DISTINCT p.audiobook_id) AS completed_count
+                    FROM audiobook_progress p
+                    JOIN audiobooks a ON a.id = p.audiobook_id
+                    LEFT JOIN libraries l ON l.id = a.library_id
+                    WHERE p.user_id = ?
+                      AND COALESCE(p.is_completed, 0) = 1
+                    GROUP BY COALESCE(l.name, '오디오북')
+                    ORDER BY completed_count DESC, category_name ASC
+                    """,
+                    (user_id,),
+                ) or []
+            except Exception:
+                category_rows = []
+
+        completed_by_date = {}
+        for r in completed_rows:
+            d = str(col(r, "completed_date", 3))
+            completed_by_date.setdefault(d, []).append({
+                "book_id": col(r, "audiobook_id", 0),
+                "title": col(r, "title", 1),
+                "series_name": col(r, "title", 1) or "",
+                "cover_image": col(r, "cover_image", 2) or "",
+                "file_format": "audiobook",
+            })
+
+        monthly = {}
+        for d, entries in completed_by_date.items():
+            ym = d[:7]
+            m = monthly.setdefault(ym, {"pages": 0, "active_days": 0, "completed_books": 0})
+            m["completed_books"] += len(entries)
+
+        return {
+            "available": True,
+            "mode": "audiobook",
+            "daily": {},
+            "monthly": monthly,
+            "completed_by_date": completed_by_date,
+            "detail_by_date": {},
+            "completed_by_category": [
+                {
+                    "category_name": col(r, "category_name", 0),
+                    "completed_count": int(col(r, "completed_count", 1) or 0),
+                }
+                for r in category_rows
+            ],
+            "streak": {"current": 0, "longest": 0},
+            "today": today_str,
+            "this_month": today_str[:7],
+            "history_days": CALENDAR_HISTORY_DAYS,
+        }
 
     @staticmethod
     def _current_streak(active_dates):
@@ -314,25 +323,38 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
                 "error": "로그인 후 이용할 수 있는 개인 독서 통계입니다.",
             }
 
-        calendar = self._fetch_calendar(db_type, user_id)
-        this_month_stats = calendar["monthly"].get(
-            calendar["this_month"], {"pages": 0, "active_days": 0, "completed_books": 0}
-        )
-
-        items = [
-            {
-                "item_type": "metric",
-                "metric": "이번달 독서 페이지 / 독서일수",
-                "value": f"{this_month_stats['pages']}쪽 / {this_month_stats['active_days']}일",
-                "description": "내 기록(user_reading_log) 기준",
-            },
-            {
-                "item_type": "metric",
-                "metric": "연속 독서일 (현재 / 최장)",
-                "value": f"{calendar['streak']['current']}일 / {calendar['streak']['longest']}일",
-                "description": "오늘 또는 어제까지 이어진 기록 기준",
-            },
-        ]
+        if db_type == "audiobook":
+            calendar = self._fetch_audiobook_calendar(user_id)
+            this_month_stats = calendar["monthly"].get(
+                calendar["this_month"], {"pages": 0, "active_days": 0, "completed_books": 0}
+            )
+            items = [
+                {
+                    "item_type": "metric",
+                    "metric": "이번달 완독 오디오북",
+                    "value": f"{this_month_stats['completed_books']}권",
+                    "description": "audiobook_progress 기준 (일별 청취 기록 없음)",
+                },
+            ]
+        else:
+            calendar = self._fetch_book_calendar(db_type, user_id)
+            this_month_stats = calendar["monthly"].get(
+                calendar["this_month"], {"pages": 0, "active_days": 0, "completed_books": 0}
+            )
+            items = [
+                {
+                    "item_type": "metric",
+                    "metric": "이번달 독서 페이지 / 독서일수",
+                    "value": f"{this_month_stats['pages']}쪽 / {this_month_stats['active_days']}일",
+                    "description": "내 기록(user_reading_log) 기준",
+                },
+                {
+                    "item_type": "metric",
+                    "metric": "연속 독서일 (현재 / 최장)",
+                    "value": f"{calendar['streak']['current']}일 / {calendar['streak']['longest']}일",
+                    "description": "오늘 또는 어제까지 이어진 기록 기준",
+                },
+            ]
 
         return {
             "success": True,

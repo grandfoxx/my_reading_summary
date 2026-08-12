@@ -7,6 +7,7 @@
     <div class="mrs-filter-actions">
       <button class="mrs-btn active" data-type="general"><i class="fa-solid fa-book"></i> 일반 서재</button>
       <button class="mrs-btn" data-type="adult"><i class="fa-solid fa-lock"></i> 성인 서재</button>
+      <button class="mrs-btn" data-type="audiobook"><i class="fa-solid fa-headphones"></i> 오디오북</button>
     </div>
   </div>
 
@@ -14,19 +15,19 @@
 
   <div id="mrs-main">
     <div class="mrs-summary-row">
-      <div class="mrs-summary-card">
+      <div class="mrs-summary-card" id="mrs-card-pages">
         <span class="mrs-summary-label">이번달 독서 페이지</span>
         <h3 class="mrs-summary-value" id="mrs-month-pages">-</h3>
       </div>
-      <div class="mrs-summary-card">
+      <div class="mrs-summary-card" id="mrs-card-days">
         <span class="mrs-summary-label">이번달 독서일수</span>
         <h3 class="mrs-summary-value" id="mrs-month-days">-</h3>
       </div>
-      <div class="mrs-summary-card">
+      <div class="mrs-summary-card" id="mrs-card-completed">
         <span class="mrs-summary-label">이번달 완독 권수</span>
         <h3 class="mrs-summary-value" id="mrs-month-completed">-</h3>
       </div>
-      <div class="mrs-summary-card highlight">
+      <div class="mrs-summary-card highlight" id="mrs-card-streak">
         <span class="mrs-summary-label"><i class="fa-solid fa-fire"></i> 연속 독서일</span>
         <h3 class="mrs-summary-value" id="mrs-streak">-</h3>
       </div>
