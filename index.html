@@ -1,0 +1,74 @@
+<div class="mrs-container">
+  <div class="mrs-header-banner">
+    <div class="mrs-title-group">
+      <h2><i class="fa-solid fa-calendar-days"></i> 내 독서 요약</h2>
+      <p class="mrs-subtitle">개인 독서 캘린더 — 로그인한 계정의 일간·월간 독서 기록입니다.</p>
+    </div>
+    <div class="mrs-filter-actions">
+      <button class="mrs-btn active" data-type="general"><i class="fa-solid fa-book"></i> 일반 서재</button>
+      <button class="mrs-btn" data-type="adult"><i class="fa-solid fa-lock"></i> 성인 서재</button>
+    </div>
+  </div>
+
+  <div id="mrs-notice" class="mrs-notice" style="display:none;"></div>
+
+  <div id="mrs-main">
+    <div class="mrs-summary-row">
+      <div class="mrs-summary-card">
+        <span class="mrs-summary-label">이번달 독서 페이지</span>
+        <h3 class="mrs-summary-value" id="mrs-month-pages">-</h3>
+      </div>
+      <div class="mrs-summary-card">
+        <span class="mrs-summary-label">이번달 독서일수</span>
+        <h3 class="mrs-summary-value" id="mrs-month-days">-</h3>
+      </div>
+      <div class="mrs-summary-card">
+        <span class="mrs-summary-label">이번달 완독 권수</span>
+        <h3 class="mrs-summary-value" id="mrs-month-completed">-</h3>
+      </div>
+      <div class="mrs-summary-card highlight">
+        <span class="mrs-summary-label"><i class="fa-solid fa-fire"></i> 연속 독서일</span>
+        <h3 class="mrs-summary-value" id="mrs-streak">-</h3>
+      </div>
+    </div>
+
+    <div class="mrs-calendar-row">
+      <div class="mrs-calendar-panel">
+        <div class="mrs-calendar-header">
+          <button id="mrs-cal-prev" class="mrs-cal-nav-btn" aria-label="이전 달"><i class="fa-solid fa-chevron-left"></i></button>
+          <span id="mrs-cal-month-label" class="mrs-cal-month-label">-</span>
+          <button id="mrs-cal-next" class="mrs-cal-nav-btn" aria-label="다음 달"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="mrs-calendar-weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="mrs-calendar-grid" id="mrs-cal-grid"></div>
+        <div class="mrs-calendar-legend">
+          <span class="mrs-legend-text">적음</span>
+          <span class="mrs-legend-swatch level-0"></span>
+          <span class="mrs-legend-swatch level-1"></span>
+          <span class="mrs-legend-swatch level-2"></span>
+          <span class="mrs-legend-swatch level-3"></span>
+          <span class="mrs-legend-swatch level-4"></span>
+          <span class="mrs-legend-text">많음</span>
+          <span class="mrs-legend-completed-dot"></span>
+          <span class="mrs-legend-text">완독</span>
+        </div>
+      </div>
+
+      <div class="mrs-category-panel">
+        <h3><i class="fa-solid fa-layer-group"></i> 카테고리별 누적 완독</h3>
+        <div class="mrs-category-list" id="mrs-category-list">
+          <p class="mrs-panel-note">완독 기록이 없습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mrs-detail-panel">
+      <h3 id="mrs-detail-title"><i class="fa-solid fa-book-open-reader"></i> 날짜를 선택하세요</h3>
+      <div id="mrs-detail-list" class="mrs-detail-list">
+        <p class="mrs-panel-note">캘린더에서 날짜를 클릭하면 그날 읽은 책과 완독 도서가 표시됩니다.</p>
+      </div>
+    </div>
+  </div>
+</div>
