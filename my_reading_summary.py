@@ -40,8 +40,15 @@ class MyReadingSummaryProvider(BaseMetadataProvider):
         "order": 91,
     }
 
-    # 이 NAS 인스턴스에서만 직접 관리하는 플러그인이라 GitHub 자동 업데이트는 사용하지 않는다.
-    update_manifest = {"enabled": False}
+    update_manifest = {
+        "enabled": True,
+        "provider": "github-raw",
+        "raw_base_url": "https://raw.githubusercontent.com/grandfoxx/my_reading_summary/master",
+        "files": ["my_reading_summary.py", "__init__.py", "VERSION", "index.html", "script.js", "style.css"],
+        "version_file": "VERSION",
+        "version_key": "plugin version",
+        "show_sample_update_button": True,
+    }
 
     def search(self, db_type, query):
         return []
