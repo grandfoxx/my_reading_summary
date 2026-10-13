@@ -2,7 +2,7 @@
   <div class="mrs-header-banner">
     <div class="mrs-title-group">
       <h2><i class="fa-solid fa-calendar-days"></i> 내 독서 요약</h2>
-      <p class="mrs-subtitle">개인 독서 캘린더 — 로그인한 계정의 일간·월간 독서 기록입니다.</p>
+      <p class="mrs-subtitle">로그인한 계정의 독서 캘린더 · 연간 통계 · 리와인드</p>
     </div>
     <div class="mrs-filter-actions">
       <button class="mrs-btn active" data-type="general"><i class="fa-solid fa-book"></i> 일반 서재</button>
@@ -14,62 +14,212 @@
   <div id="mrs-notice" class="mrs-notice" style="display:none;"></div>
 
   <div id="mrs-main">
-    <div class="mrs-summary-row">
-      <div class="mrs-summary-card" id="mrs-card-pages">
-        <span class="mrs-summary-label">이번달 독서 페이지</span>
-        <h3 class="mrs-summary-value" id="mrs-month-pages">-</h3>
+    <div class="mrs-tabbar">
+      <div class="mrs-tabs" role="tablist">
+        <button class="mrs-tab active" data-view="month" role="tab"><i class="fa-solid fa-calendar-days"></i> 월간</button>
+        <button class="mrs-tab" data-view="year" role="tab"><i class="fa-solid fa-chart-column"></i> 연간</button>
+        <button class="mrs-tab" data-view="rewind" role="tab"><i class="fa-solid fa-backward"></i> 리와인드</button>
       </div>
-      <div class="mrs-summary-card" id="mrs-card-days">
-        <span class="mrs-summary-label">이번달 독서일수</span>
-        <h3 class="mrs-summary-value" id="mrs-month-days">-</h3>
-      </div>
-      <div class="mrs-summary-card" id="mrs-card-completed">
-        <span class="mrs-summary-label">이번달 완독 권수</span>
-        <h3 class="mrs-summary-value" id="mrs-month-completed">-</h3>
-      </div>
-      <div class="mrs-summary-card highlight" id="mrs-card-streak">
-        <span class="mrs-summary-label"><i class="fa-solid fa-fire"></i> 연속 독서일</span>
-        <h3 class="mrs-summary-value" id="mrs-streak">-</h3>
+      <div class="mrs-export">
+        <button class="mrs-btn mrs-btn-sm" id="mrs-export-csv" title="독서 기록을 CSV 파일로 저장"><i class="fa-solid fa-file-csv"></i> 기록 CSV</button>
+        <button class="mrs-btn mrs-btn-sm" id="mrs-export-md" title="선택한 연도 요약을 마크다운으로 저장"><i class="fa-solid fa-file-lines"></i> 연간 요약 MD</button>
       </div>
     </div>
 
-    <div class="mrs-calendar-row">
-      <div class="mrs-calendar-panel">
-        <div class="mrs-calendar-header">
-          <button id="mrs-cal-prev" class="mrs-cal-nav-btn" aria-label="이전 달"><i class="fa-solid fa-chevron-left"></i></button>
-          <span id="mrs-cal-month-label" class="mrs-cal-month-label">-</span>
-          <button id="mrs-cal-next" class="mrs-cal-nav-btn" aria-label="다음 달"><i class="fa-solid fa-chevron-right"></i></button>
+    <!-- ===================== 월간 ===================== -->
+    <section class="mrs-view" id="mrs-view-month">
+      <div class="mrs-summary-row">
+        <div class="mrs-summary-card" id="mrs-card-pages">
+          <span class="mrs-summary-label">이번달 독서 페이지</span>
+          <h3 class="mrs-summary-value" id="mrs-month-pages">-</h3>
         </div>
-        <div class="mrs-calendar-weekdays">
-          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        <div class="mrs-summary-card" id="mrs-card-minutes">
+          <span class="mrs-summary-label">이번달 독서 시간</span>
+          <h3 class="mrs-summary-value" id="mrs-month-minutes">-</h3>
         </div>
-        <div class="mrs-calendar-grid" id="mrs-cal-grid"></div>
-        <div class="mrs-calendar-legend">
-          <span class="mrs-legend-text">적음</span>
-          <span class="mrs-legend-swatch level-0"></span>
-          <span class="mrs-legend-swatch level-1"></span>
-          <span class="mrs-legend-swatch level-2"></span>
-          <span class="mrs-legend-swatch level-3"></span>
-          <span class="mrs-legend-swatch level-4"></span>
-          <span class="mrs-legend-text">많음</span>
-          <span class="mrs-legend-completed-dot"></span>
-          <span class="mrs-legend-text">완독</span>
+        <div class="mrs-summary-card" id="mrs-card-days">
+          <span class="mrs-summary-label">이번달 독서일수</span>
+          <h3 class="mrs-summary-value" id="mrs-month-days">-</h3>
+        </div>
+        <div class="mrs-summary-card" id="mrs-card-completed">
+          <span class="mrs-summary-label">이번달 완독 권수</span>
+          <h3 class="mrs-summary-value" id="mrs-month-completed">-</h3>
+        </div>
+        <div class="mrs-summary-card highlight" id="mrs-card-streak">
+          <span class="mrs-summary-label"><i class="fa-solid fa-fire"></i> 연속 독서일</span>
+          <h3 class="mrs-summary-value" id="mrs-streak">-</h3>
+          <span class="mrs-summary-sub" id="mrs-streak-range"></span>
         </div>
       </div>
 
-      <div class="mrs-category-panel">
-        <h3><i class="fa-solid fa-layer-group"></i> 카테고리별 누적 완독</h3>
-        <div class="mrs-category-list" id="mrs-category-list">
-          <p class="mrs-panel-note">완독 기록이 없습니다.</p>
+      <div class="mrs-week-goal-row" id="mrs-week-goal-row">
+        <div class="mrs-panel mrs-week-panel">
+          <h3><i class="fa-solid fa-calendar-week"></i> 최근 7일</h3>
+          <div class="mrs-week-strip" id="mrs-week-strip"></div>
+        </div>
+        <div class="mrs-panel mrs-goal-panel">
+          <h3><i class="fa-solid fa-bullseye"></i> 일간 목표
+            <button class="mrs-link-btn" id="mrs-goal-edit" type="button">설정</button>
+          </h3>
+          <div id="mrs-goal-body"></div>
+          <form class="mrs-goal-form" id="mrs-goal-form" hidden>
+            <label>기준
+              <select id="mrs-goal-kind">
+                <option value="pages">페이지</option>
+                <option value="minutes">시간(분)</option>
+              </select>
+            </label>
+            <label>하루 목표
+              <input type="number" id="mrs-goal-value" min="1" max="5000" step="1" />
+            </label>
+            <div class="mrs-goal-actions">
+              <button class="mrs-btn mrs-btn-sm active" type="submit">저장</button>
+              <button class="mrs-btn mrs-btn-sm" type="button" id="mrs-goal-clear">목표 삭제</button>
+              <button class="mrs-btn mrs-btn-sm" type="button" id="mrs-goal-cancel">닫기</button>
+            </div>
+          </form>
         </div>
       </div>
-    </div>
 
-    <div class="mrs-detail-panel">
-      <h3 id="mrs-detail-title"><i class="fa-solid fa-book-open-reader"></i> 날짜를 선택하세요</h3>
-      <div id="mrs-detail-list" class="mrs-detail-list">
-        <p class="mrs-panel-note">캘린더에서 날짜를 클릭하면 그날 읽은 책과 완독 도서가 표시됩니다.</p>
+      <div class="mrs-calendar-row">
+        <div class="mrs-calendar-panel">
+          <div class="mrs-calendar-header">
+            <button id="mrs-cal-prev" class="mrs-cal-nav-btn" aria-label="이전 달"><i class="fa-solid fa-chevron-left"></i></button>
+            <span id="mrs-cal-month-label" class="mrs-cal-month-label">-</span>
+            <button id="mrs-cal-next" class="mrs-cal-nav-btn" aria-label="다음 달"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div class="mrs-calendar-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          </div>
+          <div class="mrs-calendar-grid" id="mrs-cal-grid"></div>
+          <div class="mrs-calendar-legend">
+            <span class="mrs-legend-text">적음</span>
+            <span class="mrs-legend-swatch level-0"></span>
+            <span class="mrs-legend-swatch level-1"></span>
+            <span class="mrs-legend-swatch level-2"></span>
+            <span class="mrs-legend-swatch level-3"></span>
+            <span class="mrs-legend-swatch level-4"></span>
+            <span class="mrs-legend-text">많음</span>
+            <span class="mrs-legend-completed-dot"></span>
+            <span class="mrs-legend-text">완독</span>
+            <span class="mrs-legend-goal"></span>
+            <span class="mrs-legend-text">목표 달성</span>
+          </div>
+          <label class="mrs-check">
+            <input type="checkbox" id="mrs-opt-covers" checked />
+            완독한 날에 표지 표시
+          </label>
+        </div>
+
+        <div class="mrs-category-panel">
+          <h3><i class="fa-solid fa-layer-group"></i> 카테고리별 누적 완독</h3>
+          <div class="mrs-category-list" id="mrs-category-list">
+            <p class="mrs-panel-note">완독 기록이 없습니다.</p>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <div class="mrs-detail-panel">
+        <h3 id="mrs-detail-title"><i class="fa-solid fa-book-open-reader"></i> 날짜를 선택하세요</h3>
+        <div id="mrs-detail-list" class="mrs-detail-list">
+          <p class="mrs-panel-note">캘린더에서 날짜를 클릭하면 그날 읽은 책과 완독 도서가 표시됩니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 연간 ===================== -->
+    <section class="mrs-view" id="mrs-view-year" hidden>
+      <div class="mrs-year-nav">
+        <button id="mrs-year-prev" class="mrs-cal-nav-btn" aria-label="이전 해"><i class="fa-solid fa-chevron-left"></i></button>
+        <span id="mrs-year-label" class="mrs-year-label">-</span>
+        <button id="mrs-year-next" class="mrs-cal-nav-btn" aria-label="다음 해"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+
+      <div id="mrs-year-empty" class="mrs-panel mrs-panel-note" hidden>이 해에는 독서 기록이 없습니다.</div>
+
+      <div id="mrs-year-body">
+        <div class="mrs-summary-row" id="mrs-year-cards"></div>
+
+        <div class="mrs-panel mrs-ygoal-panel">
+          <h3><i class="fa-solid fa-flag-checkered"></i> 연간 목표 (완독 권수)
+            <button class="mrs-link-btn" id="mrs-ygoal-edit" type="button">설정</button>
+          </h3>
+          <div id="mrs-ygoal-body"></div>
+        </div>
+
+        <div class="mrs-grid-2">
+          <div class="mrs-panel">
+            <h3><i class="fa-solid fa-chart-column"></i> <span id="mrs-month-chart-title">월별 독서량</span></h3>
+            <div class="mrs-bars" id="mrs-month-bars"></div>
+          </div>
+          <div class="mrs-panel">
+            <h3><i class="fa-solid fa-calendar-week"></i> 요일별 독서량</h3>
+            <div class="mrs-hbars" id="mrs-weekday-bars"></div>
+          </div>
+        </div>
+
+        <div class="mrs-panel" id="mrs-heat-panel">
+          <h3><i class="fa-solid fa-border-all"></i> 한 해 독서 달력</h3>
+          <div class="mrs-heat-scroll">
+            <div class="mrs-heat-months" id="mrs-heat-months"></div>
+            <div class="mrs-heat" id="mrs-heat"></div>
+          </div>
+          <div class="mrs-calendar-legend">
+            <span class="mrs-legend-text">적음</span>
+            <span class="mrs-legend-swatch level-0"></span>
+            <span class="mrs-legend-swatch level-1"></span>
+            <span class="mrs-legend-swatch level-2"></span>
+            <span class="mrs-legend-swatch level-3"></span>
+            <span class="mrs-legend-swatch level-4"></span>
+            <span class="mrs-legend-text">많음</span>
+          </div>
+        </div>
+
+        <div class="mrs-grid-2">
+          <div class="mrs-panel">
+            <h3><i class="fa-solid fa-trophy"></i> 많이 읽은 책 Top 5</h3>
+            <div id="mrs-top-books" class="mrs-rank-list"></div>
+          </div>
+          <div class="mrs-panel">
+            <h3><i class="fa-solid fa-layer-group"></i> 시리즈 Top 5</h3>
+            <div id="mrs-top-series" class="mrs-rank-list"></div>
+          </div>
+        </div>
+
+        <div class="mrs-grid-2">
+          <div class="mrs-panel">
+            <h3><i class="fa-solid fa-folder-open"></i> 카테고리 Top 5</h3>
+            <div id="mrs-top-cats" class="mrs-rank-list"></div>
+          </div>
+          <div class="mrs-panel">
+            <h3><i class="fa-solid fa-file"></i> 파일 형식별</h3>
+            <div id="mrs-top-formats" class="mrs-rank-list"></div>
+          </div>
+        </div>
+
+        <div class="mrs-panel">
+          <h3><i class="fa-solid fa-circle-check"></i> <span id="mrs-wall-title">이 해에 완독한 책</span></h3>
+          <div class="mrs-wall" id="mrs-year-wall"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 리와인드 ===================== -->
+    <section class="mrs-view" id="mrs-view-rewind" hidden>
+      <div class="mrs-year-nav">
+        <button id="mrs-rw-prev" class="mrs-cal-nav-btn" aria-label="이전 해"><i class="fa-solid fa-chevron-left"></i></button>
+        <span id="mrs-rw-label" class="mrs-year-label">-</span>
+        <button id="mrs-rw-next" class="mrs-cal-nav-btn" aria-label="다음 해"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      <div id="mrs-rw-empty" class="mrs-panel mrs-panel-note" hidden>이 해에는 독서 기록이 없습니다.</div>
+      <div id="mrs-rw-body" class="mrs-rewind-wrap">
+        <div class="mrs-rewind-card" id="mrs-rewind-card"></div>
+        <div class="mrs-rewind-actions">
+          <button class="mrs-btn active" id="mrs-rw-save" type="button"><i class="fa-solid fa-image"></i> 이미지로 저장</button>
+          <button class="mrs-btn" id="mrs-rw-copy" type="button"><i class="fa-solid fa-copy"></i> 텍스트 복사</button>
+          <span class="mrs-rewind-hint" id="mrs-rw-hint"></span>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
